@@ -7,12 +7,12 @@ from shapely import wkb
 from PIL import Image, ImageDraw, ImageFont
 
 # ==============================================================================
-# YÜKSEK KONTRASTLI RENK PALETİ (Neon GIS Teması)
+# YÜKSEK KONTRASTLI RENK PALETİ
 # ==============================================================================
 RENK_DOGA_FILL = (0, 80, 0, 90)          
 RENK_ANAYOL = (255, 69, 0, 255)          
 RENK_ARAYOL = (0, 191, 255, 220)         
-RENK_BINA_STD_FILL = (160, 32, 240, 110) # Overture AI Binaları
+RENK_BINA_STD_FILL = (160, 32, 240, 110) 
 RENK_BINA_STD_OUT = (200, 50, 255, 230)  
 RENK_OKUL_FILL = (255, 215, 0, 160)      
 RENK_HASTANE_FILL = (255, 20, 20, 160)   
@@ -33,6 +33,9 @@ def piksel_alani_hesapla(noktalar):
         alan -= noktalar[j][0] * noktalar[i][1]
     return abs(alan) / 2.0
 
+# RAPORLARI TUTACAĞIMIZ ANA LİSTE
+tum_raporlar = []
+
 for bolge in ayarlar["bolgeler"]:
     zemin_dosyasi = f"{bolge['isim']}_ham_harita.png"
     cikti_dosyasi = f"{bolge['isim']}_ULTIMATE_HIBRIT.png"
@@ -40,29 +43,32 @@ for bolge in ayarlar["bolgeler"]:
     if not os.path.exists(zemin_dosyasi):
         print(f"Atlanıyor: {zemin_dosyasi} bulunamadı.")
         continue
+        
+    # --- BU BÖLGE İÇİN İSTATİSTİK SAYAÇLARI ---
+    istatistik = {
+        "Bölge Adı": bolge['isim'],
+        "Havuz Sayısı": 0,
+        "Yapay Zeka (AI) Bina Sayısı": 0,
+        "Ticari Bina Sayısı": 0,
+        "Eğitim Binası Sayısı": 0,
+        "Sağlık Binası Sayısı": 0,
+        "Toplam Yeşil Alan (m2)": 0,
+        "Toplam İnşaat Alanı (m2)": 0
+    }
 
-    print(f"\n{'='*50}\n---> {bolge['isim']} İÇİN HİBRİT MOTOR BAŞLATILDI\n{'='*50}")
+    print(f"\n{'='*50}\n---> {bolge['isim']} İÇİN HİBRİT MOTOR VE RAPORLAMA BAŞLADI\n{'='*50}")
     
     tolerans = 0.0020 
     sorgu_kuzey, sorgu_guney = bolge['kuzey'] + tolerans, bolge['guney'] - tolerans
     sorgu_bati, sorgu_dogu = bolge['bati'] - tolerans, bolge['dogu'] + tolerans
 
-    # 1. OVERTURE MAPS'TEN YAPAY ZEKA BİNALARINI ÇEKME
-    print("1/2: Overture AI binaları (GeoParquet) indiriliyor...")
     bbox = (sorgu_bati, sorgu_guney, sorgu_dogu, sorgu_kuzey)
     try:
         tablo = overturemaps.record_batch_reader("building", bbox).read_all()
         df_overture = tablo.to_pandas()
-        print(f"     Başarılı! {len(df_overture)} adet AI binası bulundu.")
-    except Exception as e:
-        print(f"     Overture Hatası: {e}")
-        df_overture = pd.DataFrame() # Hata olursa boş dataframe ile devam et
+    except Exception:
+        df_overture = pd.DataFrame() 
 
-    # 2. OSM'DEN AKILLI VERİLERİ ÇEKME (Kızılay Metro Filtresi Eklendi!)
-    print("2/2: OSM'den yollar, parklar, havuzlar ve etiketli binalar çekiliyor...")
-    
-    # SİHİRLİ OSM FİLTRESİ: ["location"!="underground"] ve ["layer"!~"^-"] 
-    # Bu sayede yer altındaki metrolar ve eksi katlar haritaya çizilmez!
     overpass_sorgusu = f"""
     [out:json][timeout:180];
     (
@@ -75,12 +81,9 @@ for bolge in ayarlar["bolgeler"]:
     out tags geom;
     """
     
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    cevap = requests.post("http://overpass-api.de/api/interpreter", data={'data': overpass_sorgusu}, headers=headers)
+    cevap = requests.post("http://overpass-api.de/api/interpreter", data={'data': overpass_sorgusu}, headers={'User-Agent': 'Mozilla/5.0'})
     elemanlar = cevap.json().get('elements', []) if cevap.status_code == 200 else []
-    print(f"     Başarılı! {len(elemanlar)} adet OSM verisi alındı.")
 
-    # ÇİZİM AŞAMASI
     harita = Image.open(zemin_dosyasi).convert("RGBA")
     cizim_katmani = Image.new("RGBA", harita.size, (255, 255, 255, 0))
     cizici = ImageDraw.Draw(cizim_katmani)
@@ -95,11 +98,15 @@ for bolge in ayarlar["bolgeler"]:
     try: font = ImageFont.truetype("arial.ttf", 14)
     except IOError: font = ImageFont.load_default()
 
-    # KATMAN 1: OSM Doğal Alanlar
+    # KATMAN 1: OSM Doğal Alanlar (Yeşil Alan İstatistiği)
     for e in elemanlar:
         if e.get('tags', {}).get('leisure') == 'park' or e.get('tags', {}).get('natural') == 'wood':
             noktalar = [piksele_cevir(n['lat'], n['lon']) for n in e.get('geometry', [])]
-            if len(noktalar) > 2: cizici.polygon(noktalar, fill=RENK_DOGA_FILL)
+            if len(noktalar) > 2: 
+                cizici.polygon(noktalar, fill=RENK_DOGA_FILL)
+                # Yeşil alan hesapla ve rapora ekle
+                m2 = int(piksel_alani_hesapla(noktalar) * bolge['m2_carpani'])
+                istatistik["Toplam Yeşil Alan (m2)"] += m2
 
     # KATMAN 2: OSM Yollar
     for e in elemanlar:
@@ -110,7 +117,7 @@ for bolge in ayarlar["bolgeler"]:
             elif yol_turu in ['residential', 'tertiary']: cizici.line(noktalar, fill=RENK_ARAYOL, width=5)
             else: cizici.line(noktalar, fill=(200, 200, 200, 150), width=2)
 
-# KATMAN 3: OVERTURE Binaları (Ana Bina Katmanı)
+    # KATMAN 3: OVERTURE Binaları (AI Bina İstatistiği)
     if not df_overture.empty:
         for index, row in df_overture.iterrows():
             try:
@@ -118,17 +125,14 @@ for bolge in ayarlar["bolgeler"]:
                 def ciz_overture_poligon(polygon):
                     noktalar = [piksele_cevir(lat, lon) for lon, lat in polygon.exterior.coords]
                     if len(noktalar) > 2:
-                        piksel_alani = piksel_alani_hesapla(noktalar)
-                        metrekare = int(piksel_alani * bolge['m2_carpani'])
-                        
-                        # --- İŞTE SİHİRLİ FİLTRE BURADA ---
-                        # Kızılay metrosu gibi yeraltı hatalarını ve devasa Overture anomalilerini çöpe atıyoruz.
-                        # Gerçek büyük binalar (AVM vb.) zaten OSM katmanından Renkli olarak gelecek!
-                        if metrekare > 10000:
-                            return # Bu çokgeni çizmeden doğrudan atla
+                        metrekare = int(piksel_alani_hesapla(noktalar) * bolge['m2_carpani'])
+                        if metrekare > 10000: return 
                             
-                        # Standart evleri Neon Mor ile çiz
                         cizici.polygon(noktalar, fill=RENK_BINA_STD_FILL, outline=RENK_BINA_STD_OUT)
+                        
+                        # AI Bina İstatistiklerini Güncelle
+                        istatistik["Yapay Zeka (AI) Bina Sayısı"] += 1
+                        istatistik["Toplam İnşaat Alanı (m2)"] += metrekare
                         
                         if metrekare > 30:
                             merkez_x = sum(p[0] for p in noktalar) / len(noktalar)
@@ -141,41 +145,47 @@ for bolge in ayarlar["bolgeler"]:
                     for poly in geom.geoms: ciz_overture_poligon(poly)
             except Exception: pass
 
-    # KATMAN 4: OSM Akıllı Binalar (Okul, Hastane, AVM - Overture'un üzerine yapışır)
+    # KATMAN 4: OSM Akıllı Binalar (Özel Bina İstatistiği)
     for e in elemanlar:
         if 'building' in e.get('tags', {}):
             tags = e.get('tags', {})
             bina_turu = tags.get('building', '')
             amenity = tags.get('amenity', '')
             
-            # Sadece "Özel" binaları çiz (Standartları Overture zaten çizdi)
+            # Kategori belirleme
             if amenity in ['school', 'university', 'college'] or bina_turu == 'school':
                 renk, cerceve = RENK_OKUL_FILL, (255, 255, 0, 255)
+                istatistik["Eğitim Binası Sayısı"] += 1
             elif amenity in ['hospital', 'clinic', 'pharmacy']:
                 renk, cerceve = RENK_HASTANE_FILL, (255, 0, 0, 255)
+                istatistik["Sağlık Binası Sayısı"] += 1
             elif bina_turu in ['commercial', 'retail', 'office'] or amenity in ['bank', 'marketplace']:
                 renk, cerceve = RENK_TICARI_FILL, RENK_TICARI_OUT
+                istatistik["Ticari Bina Sayısı"] += 1
             else:
-                continue # Standart binaysa atla, zaten Overture çizdi!
+                continue 
                 
             noktalar = [piksele_cevir(n['lat'], n['lon']) for n in e.get('geometry', [])]
             if len(noktalar) > 2:
                 cizici.polygon(noktalar, fill=renk, outline=cerceve)
-                piksel_alani = piksel_alani_hesapla(noktalar)
-                metrekare = int(piksel_alani * bolge['m2_carpani'])
+                metrekare = int(piksel_alani_hesapla(noktalar) * bolge['m2_carpani'])
+                istatistik["Toplam İnşaat Alanı (m2)"] += metrekare # Özel binaları da inşaat alanına ekle
+                
                 if metrekare > 30:
                     merkez_x = sum(p[0] for p in noktalar) / len(noktalar)
                     merkez_y = sum(p[1] for p in noktalar) / len(noktalar)
                     cizici.text((merkez_x-10, merkez_y-5), f"{metrekare}m2", fill=(0,0,0,255), font=font)
                     cizici.text((merkez_x-11, merkez_y-6), f"{metrekare}m2", fill=(255,255,255,255), font=font)
 
-    # KATMAN 5: Havuzlar (En üstte parlamaları için)
+    # KATMAN 5: Havuzlar (Havuz İstatistiği)
     for e in elemanlar:
         if e.get('tags', {}).get('leisure') == 'swimming_pool':
             noktalar = [piksele_cevir(n['lat'], n['lon']) for n in e.get('geometry', [])]
-            if len(noktalar) > 2: cizici.polygon(noktalar, fill=RENK_HAVUZ_FILL, outline=RENK_HAVUZ_OUT)
+            if len(noktalar) > 2: 
+                cizici.polygon(noktalar, fill=RENK_HAVUZ_FILL, outline=RENK_HAVUZ_OUT)
+                istatistik["Havuz Sayısı"] += 1
 
-    # Lejant ve Kaydetme İşlemleri
+    # Lejant ve Çizim Kayıtları (Aynı kalıyor...)
     son_harita = Image.alpha_composite(harita, cizim_katmani)
     cizici_son = ImageDraw.Draw(son_harita)
     try: font_lejant = ImageFont.truetype("arial.ttf", 36)
@@ -202,4 +212,23 @@ for bolge in ayarlar["bolgeler"]:
         y_offset += 40
 
     son_harita.convert("RGB").save(cikti_dosyasi)
-    print(f"MÜKEMMEL! Hibrit motor tamamlandı. Harita: {cikti_dosyasi}")
+    print(f"HARİTA TAMAMLANDI: {cikti_dosyasi}")
+    
+    # İstatistiği ana listeye ekle
+    tum_raporlar.append(istatistik)
+
+# ==============================================================================
+# TÜM İŞLEMLER BİTİNCE EXCEL/CSV RAPORUNU ÇIKAR
+# ==============================================================================
+if tum_raporlar:
+    df_rapor = pd.DataFrame(tum_raporlar)
+    rapor_dosyasi = "SEHIR_RAPORLARI.csv"
+    
+    # Türkçe karakter bozulmaması için utf-8-sig kullanıyoruz (Excel dostu)
+    df_rapor.to_csv(rapor_dosyasi, index=False, encoding='utf-8-sig')
+    
+    print(f"\n{'*'*50}")
+    print(f"MÜKEMMEL! Tüm analizler tamamlandı.")
+    print(f"Veri raporunuz '{rapor_dosyasi}' dosyasına kaydedildi.")
+    print(df_rapor.to_string(index=False)) # Konsola da havalı bir şekilde yazdıralım
+    print(f"{'*'*50}")

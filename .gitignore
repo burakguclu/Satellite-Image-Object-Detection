@@ -5,6 +5,10 @@ ayarlar.json
 *_ham_harita.png
 *_FINAL_*.png
 *_OVERTURE_*.png
+*_ULTIMATE_*.png
+
+# Uydu parça klasörleri (büyük boyutlu)
+*_parcalar/
 
 # YOLO model dosyaları
 *.pt

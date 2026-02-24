@@ -10,7 +10,13 @@ for bolge in ayarlar["bolgeler"]:
     klasor = f"{bolge['isim']}_parcalar"
     cikti_adi = f"{bolge['isim']}_ham_harita.png"
     
-    print(f"---> {bolge['isim']} parçaları birleştiriliyor...")
+    # --- EKLENEN KONTROL: HAM HARİTA VARSA BÖLGEYİ ATLA ---
+    if os.path.exists(cikti_adi):
+        print(f"\n---> {bolge['isim']} için '{cikti_adi}' zaten mevcut. Birleştirme pas geçiliyor...")
+        continue
+    # ------------------------------------------------------
+    
+    print(f"\n---> {bolge['isim']} parçaları birleştiriliyor...")
     if not os.path.exists(klasor):
         print(f"Klasör bulunamadı, atlanıyor: {klasor}")
         continue

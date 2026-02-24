@@ -14,8 +14,15 @@ if not api_key or api_key == "BURAYA_GOOGLE_MAPS_API_ANAHTARINIZI_YAZIN":
 
 for bolge in ayarlar["bolgeler"]:
     klasor = f"{bolge['isim']}_parcalar"
-    if not os.path.exists(klasor):
-        os.makedirs(klasor)
+    
+    # --- EKLENEN KONTROL: KLASÖR VARSA BÖLGEYİ TAMAMEN ATLA ---
+    if os.path.exists(klasor):
+        print(f"\n---> {bolge['isim']} için '{klasor}' zaten mevcut. İndirme pas geçiliyor...")
+        continue
+    # ----------------------------------------------------------
+    
+    # Klasör yoksa oluştur ve indirmeye başla
+    os.makedirs(klasor)
 
     print(f"\n---> {bolge['isim']} İndirmesi Başlıyor (Zoom: {bolge['zoom']})")
     satir, mevcut_enlem = 0, bolge['kuzey']
