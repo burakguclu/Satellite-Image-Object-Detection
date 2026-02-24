@@ -4,6 +4,7 @@ ayarlar.json
 # Büyük görüntü çıktıları
 *_ham_harita.png
 *_FINAL_*.png
+*_OVERTURE_*.png
 
 # YOLO model dosyaları
 *.pt
