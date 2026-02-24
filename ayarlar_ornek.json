@@ -1,0 +1,31 @@
+{
+  "api_key": "BURAYA_GOOGLE_MAPS_API_ANAHTARINIZI_YAZIN",
+  "bolgeler": [
+    {
+      "isim": "Ankara_Cankaya",
+      "kuzey": 39.93,
+      "guney": 39.89,
+      "bati": 32.84,
+      "dogu": 32.88,
+      "zoom": 17,
+      "enlem_adimi": 0.004,
+      "boylam_adimi": 0.005,
+      "x_piksel": 932,
+      "y_piksel": 972,
+      "m2_carpani": 0.209
+    },
+    {
+      "isim": "Istanbul_Bogaz",
+      "kuzey": 41.111437,
+      "guney": 41.1031,
+      "bati": 29.116886,
+      "dogu": 29.14,
+      "zoom": 18,
+      "enlem_adimi": 0.002,
+      "boylam_adimi": 0.0025,
+      "x_piksel": 932,
+      "y_piksel": 972,
+      "m2_carpani": 0.0522
+    }
+  ]
+}

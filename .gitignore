@@ -1,0 +1,18 @@
+# Gizli veriler (API anahtarları)
+ayarlar.json
+
+# Büyük görüntü çıktıları
+*_ham_harita.png
+*_FINAL_*.png
+
+# YOLO model dosyaları
+*.pt
+
+# Eski denemeler
+eski_denemeler_kod/
+eski_denemeler_goruntu/
+
+# Python
+__pycache__/
+*.pyc
+.env
