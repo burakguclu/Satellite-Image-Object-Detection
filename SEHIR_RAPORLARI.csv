@@ -1,6 +1,6 @@
-﻿Bölge Adı,Havuz Sayısı,Yapay Zeka (AI) Bina Sayısı,Ticari Bina Sayısı,Eğitim Binası Sayısı,Sağlık Binası Sayısı,Toplam Yeşil Alan (m2),Toplam İnşaat Alanı (m2)
-Ankara_Cankaya,8,13267,300,60,11,2971058,5204583
-Istanbul_Bogaz,680,1456,0,1,0,0,282616
-Izmir_Merkez,1,5074,1,30,1,372349,1321526
-Antalya_Merkez,6,2243,3,26,0,332209,674920
-Eskisehir_Merkez,0,11335,7,13,1,291030,1660407
+﻿Bölge Adı,Havuz Sayısı,Yapay Zeka (AI) Bina Sayısı,Ticari Bina Sayısı,Eğitim Binası Sayısı,Sağlık Binası Sayısı,Toplam Yeşil Alan (m2),Toplam İnşaat Alanı (m2),Kafe (Rakip) Sayısı,Tahmini Refah Skoru,Şube Açma Fırsat Endeksi
+Ankara_Cankaya,0,13267,0,0,0,0,4977528,0,0.0,0.0
+Istanbul_Bogaz,0,1456,0,0,0,0,281100,0,0.0,0.0
+Izmir_Merkez,0,5074,0,0,0,0,1289393,0,0.0,0.0
+Antalya_Merkez,0,2243,0,0,0,0,649575,0,0.0,0.0
+Eskisehir_Merkez,0,11335,0,0,0,0,1641469,0,0.0,0.0
